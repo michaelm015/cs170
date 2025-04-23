@@ -200,7 +200,7 @@ def depth_first_search(grid_size, start, goal, obstacles, costFn, logger):
     # Choose a proper container yourself from
     # OrderedSet, Stack, Queue, PriorityQueue
     # for the open set and closed set.
-    open_set = OrderedSet()
+    open_set = Stack()
     closed_set = OrderedSet()
     ##########################################
 
@@ -225,7 +225,38 @@ def depth_first_search(grid_size, start, goal, obstacles, costFn, logger):
     # finish the code below
     # ----------------------------------------
 #############################################################################
+    open_set.add(start)
 
+    while open_set:
+        current = open_set.pop()
+        if current in closed_set:
+            continue
+        closed_set.add(current)
+
+        if current == goal:
+            break
+        
+        for action in ACTIONS:
+            newrow = current[0] + action[0]
+            newcol = current[1] + action[1]
+            newcell = (newrow, newcol)
+
+            if not ((0 <= newrow < n_rows) and (0 <= newcol < n_cols)):
+                continue
+            if newcell in closed_set or newcell in open_set or newcell in obstacles:
+                continue
+            
+            open_set.add(newcell)
+            parent[newrow][newcol] = current
+            actions[newrow][newcol] = action
+    
+    if parent[goal_row][goal_col] is None:
+        return [], closed_set
+
+    cell = goal
+    while cell != start and parent[cell[0]][cell[1]] is not None:
+        movement.insert(0, actions[cell[0]][cell[1]])
+        cell = parent[cell[0]][cell[1]]
 #############################################################################
     return movement, closed_set
 
@@ -247,7 +278,7 @@ def breadth_first_search(grid_size, start, goal, obstacles, costFn, logger):
     # Choose a proper container yourself from
     # OrderedSet, Stack, Queue, PriorityQueue
     # for the open set and closed set.
-    open_set = OrderedSet()
+    open_set = Queue()
     closed_set = OrderedSet()
     ##########################################
 
@@ -272,7 +303,38 @@ def breadth_first_search(grid_size, start, goal, obstacles, costFn, logger):
     # finish the code below
     # ----------------------------------------
 #############################################################################
+    open_set.add(start)
+    while open_set:
+        current = open_set.pop()
+        if current in closed_set:
+            continue
+        closed_set.add(current)
 
+        if current == goal:
+            break
+
+        for action in ACTIONS:
+            newrow = current[0] + action[0]
+            newcol = current[1] + action[1]
+            newcell = (newrow, newcol)
+
+            if not ((0 <= newrow < n_rows) and (0 <= newcol < n_cols)):
+                continue
+            if newcell in closed_set or newcell in open_set or newcell in obstacles:
+                continue
+
+            open_set.add(newcell)
+            parent[newrow][newcol] = current
+            actions[newrow][newcol] = action
+
+    if parent[goal_row][goal_col] is None:
+        return [], closed_set
+
+    cell = goal
+    while cell != start:
+        row, col = cell
+        movement.insert(0, actions[row][col])
+        cell = parent[row][col]
 #############################################################################
     return movement, closed_set
 
@@ -295,7 +357,7 @@ def uniform_cost_search(grid_size, start, goal, obstacles, costFn, logger):
     # Choose a proper container yourself from
     # OrderedSet, Stack, Queue, PriorityQueue
     # for the open set and closed set.
-    open_set = OrderedSet()
+    open_set = PriorityQueue(order="min", f=lambda v: v)
     closed_set = OrderedSet()
     ##########################################
 
@@ -320,7 +382,43 @@ def uniform_cost_search(grid_size, start, goal, obstacles, costFn, logger):
     # finish the code below
     # ----------------------------------------
 #############################################################################
+    gcost = {}
+    gcost[start] = 0
+    open_set.put(start, 0)
 
+    while open_set:
+        current, currcost = open_set.pop()
+        if current in closed_set:
+            continue
+        closed_set.add(current)
+
+        if current == goal:
+            break
+        
+        for action in ACTIONS:
+            newrow = current[0] + action[0]
+            newcol = current[1] + action[1]
+            newcell = (newrow, newcol)
+
+            if not ((0 <= newrow < n_rows) and (0 <= newcol < n_cols)):
+                continue
+            if newcell in closed_set or newcell in obstacles:
+                continue
+            
+            newcost = gcost[current] + costFn(newcell)
+
+            if newcell not in gcost or newcost < gcost[newcell]:
+                gcost[newcell] = newcost
+                parent[newrow][newcol] = current
+                actions[newrow][newcol] = action
+                open_set.put(newcell, newcost)
+        
+    if parent[goal_row][goal_col] is not None:
+        cell = goal
+        while cell != start:
+            row, col = cell
+            movement.insert(0, actions[row][col])
+            cell = parent[row][col]
 #############################################################################
     return movement, closed_set
 
@@ -342,7 +440,7 @@ def astar_search(grid_size, start, goal, obstacles, costFn, logger):
     # Choose a proper container yourself from
     # OrderedSet, Stack, Queue, PriorityQueue
     # for the open set and closed set.
-    open_set = OrderedSet()
+    open_set = PriorityQueue(order="min", f=lambda v: v)
     closed_set = OrderedSet()
     ##########################################
 
@@ -369,7 +467,46 @@ def astar_search(grid_size, start, goal, obstacles, costFn, logger):
     # ----------------------------------------
     def heuristic(row, col):
 #############################################################################
-        pass
+        return abs(row - goal_row) + abs(col - goal_col)
+    
+    gcost = {}
+    gcost[start] = 0
+    fcost = gcost[start] + heuristic(start_row, start_col)
+    open_set.put(start, fcost)
+
+    while open_set:
+        current, _ = open_set.pop()
+        if current in closed_set:
+            continue
+        
+        if current == goal:
+            break
+
+        for action in ACTIONS:
+            newrow = current[0] + action[0]
+            newcol = current[1] + action[1]
+            newcell = (newrow, newcol)
+
+            if not ((0 <= newrow < n_rows) and (0 <= newcol < n_cols)):
+                continue
+            if newcell in closed_set or newcell in obstacles:
+                continue
+
+            newgcost = gcost[current] + costFn(newcell)
+
+            if newcell not in gcost or newgcost < gcost[newcell]:
+                gcost[newcell] = newgcost
+                newfcost = newgcost + heuristic(newrow, newcol)
+                parent[newrow][newcol] = current
+                actions[newrow][newcol] = action
+                open_set.put(newcell, newfcost)
+
+    if parent[goal_row][goal_col] is not None:
+        cell = goal
+        while cell != start:
+            row, col = cell
+            movement.insert(0, actions[row][col])
+            cell = parent[row][col]
 #############################################################################
     return movement, closed_set
 
