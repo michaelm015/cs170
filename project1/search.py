@@ -478,6 +478,7 @@ def astar_search(grid_size, start, goal, obstacles, costFn, logger):
         current, _ = open_set.pop()
         if current in closed_set:
             continue
+        closed_set.add(current)
         
         if current == goal:
             break
